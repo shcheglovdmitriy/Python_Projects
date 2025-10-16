@@ -1,2 +1,1 @@
-# Python_Projects
-Python
+Проекты и решения задач на языке Python.   
