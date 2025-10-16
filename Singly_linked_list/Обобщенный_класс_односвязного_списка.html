@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Управление односвязным списком</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .list-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .error {
+            color: red;
+            margin: 5px 0;
+        }
+        .success {
+            color: green;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Управление односвязным списком</h2>
+        
+        <div class="input-group">
+            <h3>Добавление элементов:</h3>
+            <input type="number" id="inputAdd" placeholder="Введите число">
+            <button onclick="addElement()">Добавить элемент</button>
+            <div id="addMessage"></div>
+        </div>
+
+        <div class="input-group">
+            <h3>Удаление элементов:</h3>
+            <input type="number" id="inputRemove" placeholder="Введите позицию (1, 2, 3...)">
+            <button onclick="removeElement()">Удалить элемент</button>
+            <div id="removeMessage"></div>
+        </div>
+
+        <div class="input-group">
+            <h3>Навигация по списку:</h3>
+            <button onclick="resetIterator()">Сбросить итератор</button>
+            <button onclick="getNext()">Следующий элемент</button>
+            <div id="navigationMessage"></div>
+        </div>
+
+        <div class="list-display">
+            <strong>Текущее состояние списка:</strong>
+            <div id="displayList"></div>
+            <div id="iteratorPosition"></div>
+        </div>
+    </div>
+
+    <script>
+        class Node {
+            constructor(data) {
+                this.data = data;
+                this.next = null;
+            }
+        }
+
+        class SListIterator {
+            constructor(slist) {
+                this.slist = slist;
+                this.next_node = slist.head;
+                this.current = null;
+                this.position = 0;
+            }
+
+            has_next() {
+                return this.next_node !== null;
+            }
+
+            next() {
+                if (!this.has_next()) {
+                    throw new Error("Нет больше элементов");
+                }
+                
+                this.current = this.next_node;
+                this.next_node = this.next_node.next;
+                this.position++;
+                return this.current.data;
+            }
+
+            add(element) {
+                const new_node = new Node(element);
+                new_node.next = this.next_node;
+
+                if (this.next_node === this.slist.head) {
+                    this.slist.head = new_node;
+                } else {
+                    let node = this.slist.head;
+                    while (node.next !== this.next_node) {
+                        node = node.next;
+                    }
+                    node.next = new_node;
+                }
+            }
+
+            remove() {
+                if (this.current === null) {
+                    throw new Error("Нет элемента для удаления");
+                }
+
+                if (this.slist.head === this.current) {
+                    this.slist.head = this.current.next;
+                } else {
+                    let node = this.slist.head;
+                    while (node.next !== this.current) {
+                        node = node.next;
+                    }
+                    node.next = this.current.next;
+                }
+
+                this.current = null;
+            }
+
+            reset() {
+                this.next_node = this.slist.head;
+                this.current = null;
+                this.position = 0;
+            }
+
+            get_current_position() {
+                return this.position;
+            }
+        }
+
+        class SList {
+            constructor() {
+                this.head = null;
+            }
+
+            toString() {
+                const elements = [];
+                let current = this.head;
+                while (current !== null) {
+                    elements.push(current.data);
+                    current = current.next;
+                }
+                return elements.length > 0 ? elements.join(' → ') : 'Пусто';
+            }
+
+            get_size() {
+                let count = 0;
+                let current = this.head;
+                while (current !== null) {
+                    count++;
+                    current = current.next;
+                }
+                return count;
+            }
+
+            get_element_at_position(position) {
+                if (position < 1) return null;
+                
+                let count = 1;
+                let current = this.head;
+                while (current !== null && count < position) {
+                    current = current.next;
+                    count++;
+                }
+                return current;
+            }
+
+            iterator() {
+                return new SListIterator(this);
+            }
+        }
+
+        // Глобальные переменные
+        const slist = new SList();
+        let it = slist.iterator();
+
+        function updateDisplay() {
+            document.getElementById('displayList').textContent = slist.toString();
+            document.getElementById('iteratorPosition').textContent = 
+                `Позиция итератора: ${it.get_current_position()}, Следующий элемент: ${it.has_next() ? 'доступен' : 'не доступен'}`;
+        }
+
+        function showMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = isError ? 'error' : 'success';
+            setTimeout(() => element.textContent = '', 3000);
+        }
+
+        function addElement() {
+            const input = document.getElementById('inputAdd');
+            const value = parseInt(input.value);
+
+            if (isNaN(value)) {
+                showMessage('addMessage', 'Введите корректное число', true);
+                return;
+            }
+
+            try {
+                it.add(value);
+                input.value = '';
+                showMessage('addMessage', `Элемент ${value} успешно добавлен`);
+                updateDisplay();
+            } catch (error) {
+                showMessage('addMessage', `Ошибка при добавлении: ${error.message}`, true);
+            }
+        }
+
+        function removeElement() {
+            const input = document.getElementById('inputRemove');
+            const position = parseInt(input.value);
+
+            if (isNaN(position) || position < 1) {
+                showMessage('removeMessage', 'Введите корректную позицию', true);
+                return;
+            }
+
+            try {
+                // Создаем временный итератор для навигации к нужной позиции
+                const tempIterator = slist.iterator();
+                let currentPosition = 0;
+                
+                // Перемещаем итератор к нужной позиции
+                while (tempIterator.has_next() && currentPosition < position) {
+                    tempIterator.next();
+                    currentPosition++;
+                }
+
+                if (currentPosition === position) {
+                    tempIterator.remove();
+                    showMessage('removeMessage', `Элемент на позиции ${position} удален`);
+                    // Сбрасываем основной итератор
+                    it.reset();
+                } else {
+                    showMessage('removeMessage', `Позиция ${position} не существует`, true);
+                }
+
+                input.value = '';
+                updateDisplay();
+            } catch (error) {
+                showMessage('removeMessage', `Ошибка при удалении: ${error.message}`, true);
+            }
+        }
+
+        function resetIterator() {
+            it.reset();
+            showMessage('navigationMessage', 'Итератор сброшен в начало');
+            updateDisplay();
+        }
+
+        function getNext() {
+            try {
+                if (it.has_next()) {
+                    const nextValue = it.next();
+                    showMessage('navigationMessage', `Следующий элемент: ${nextValue}`);
+                } else {
+                    showMessage('navigationMessage', 'Достигнут конец списка', true);
+                }
+                updateDisplay();
+            } catch (error) {
+                showMessage('navigationMessage', `Ошибка: ${error.message}`, true);
+            }
+        }
+
+        // Инициализация
+        updateDisplay();
+    </script>
+</body>
+</html>
